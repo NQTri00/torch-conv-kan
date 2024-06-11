@@ -162,7 +162,7 @@ def plotting(model, target_layer, input_tensor, N):
     output = net(input_tensor)
     x = np.linspace(0, N, input_tensor.shape[1])
     plt.style.use("seaborn-v0_8-whitegrid")
-    multicolored_lines(x, np.array([i for i in input_tensor])[0], output, f"GradCAM++ Visualization")
+    multicolored_lines(x, np.array(input_tensor.squeeze()), output, f"GradCAM++ Visualization")
 # import scipy.io as scio
 # input_tensor = input_tensor.numpy().squeeze()
 # dataNew = "G:\\datanew.mat"
