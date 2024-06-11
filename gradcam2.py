@@ -1,4 +1,4 @@
-from matplotlib import pyplot as plt
+import matplotlib.pyplot as plt
 import matplotlib.collections as mcoll
 import torch
 import torch.nn as nn
@@ -126,10 +126,10 @@ class GradCAM(BaseCAM):
         weights = np.maximum(grads, 0) * aij
         weights = np.sum(weights, axis=1)
         return weights
-    
 
 def multicolored_lines(x, y, heatmap, title_name):
     fig, ax = plt.subplots()
+    # print(x.shape, y.shape, heatmap.shape)
     lc = colorline(x, y, heatmap, cmap='rainbow')
     plt.colorbar(lc)
     lc.set_linewidth(2)
@@ -160,7 +160,8 @@ def plotting(model, target_layer, input_tensor, N):
     input_tensor = input_tensor.unsqueeze(1)
     plt.figure(figsize=(5, 1))
     output = net(input_tensor)
-    x = np.linspace(0, N, input_tensor.shape[1])
+    # print(output.shape)
+    x = np.linspace(0, N, input_tensor.shape[2])
     plt.style.use("seaborn-v0_8-whitegrid")
     multicolored_lines(x, np.array(input_tensor.squeeze()), output, f"GradCAM++ Visualization")
 # import scipy.io as scio
