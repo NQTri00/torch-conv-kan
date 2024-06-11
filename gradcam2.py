@@ -151,7 +151,7 @@ def colorline(x, y, heatmap, cmap='rainbow'):
 # from pytorch_grad_cam.utils.image import preprocess_image
 # model = Net1()
 # model.load_state_dict(torch.load('./data7/G0503_02.pt'))   #Load your own pretrained model
-def plotting(model, target_layer, input_tensor, N):
+def plotting(model, target_layer, input_tensor, N, name):
     # target_layer = model.conv1
     net = GradCAM(model, dict(model.named_modules())[target_layer])
     # from settest import Test
@@ -163,7 +163,7 @@ def plotting(model, target_layer, input_tensor, N):
     # print(output.shape)
     x = np.linspace(0, N, input_tensor.shape[2])
     plt.style.use("seaborn-v0_8-whitegrid")
-    multicolored_lines(x, np.array(input_tensor.squeeze()), output, f"GradCAM++ Visualization")
+    multicolored_lines(x, np.array(input_tensor.squeeze()), output, name)
 # import scipy.io as scio
 # input_tensor = input_tensor.numpy().squeeze()
 # dataNew = "G:\\datanew.mat"
