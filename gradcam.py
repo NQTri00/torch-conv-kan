@@ -41,8 +41,8 @@ def compute_cam_1d_output(model, data, layer_name, N):
 
     def forward_hook(module, input, output):
         nonlocal conv_outs
-        conv_outs = output
         output.requires_grad_(True)
+        conv_outs = output
 
     def backward_hook(module, grad_in, grad_out):
         nonlocal grads
@@ -77,21 +77,21 @@ def compute_cam_1d_output(model, data, layer_name, N):
     grads = grads[0]
 
     # Print shapes for debugging
-    print("conv_outs shape:", conv_outs.shape)
-    print("grads shape:", grads.shape)
+    # print("conv_outs shape:", conv_outs.shape)
+    # print("grads shape:", grads.shape)
     
     # First, second and third derivative of output gradient
     first = torch.exp(y_c) * grads
     second = torch.exp(y_c) * torch.pow(grads, 2)
     third = torch.exp(y_c) * torch.pow(grads, 3)
     
-    print("first shape:", first.shape)
-    print("second shape:", second.shape)
-    print("third shape:", third.shape)
+    # print("first shape:", first.shape)
+    # print("second shape:", second.shape)
+    # print("third shape:", third.shape)
 
     # Compute saliency maps for the class_idx prediction
     global_sum = torch.sum(conv_outs[0].reshape(-1, first.shape[1]), dim=0)
-    print("global_sum shape:", global_sum.shape)
+    # print("global_sum shape:", global_sum.shape)
     alpha_num = second
     alpha_denom = second * 2.0 + third * global_sum.reshape((1, 1, -1))
     alpha_denom = torch.where(alpha_denom != 0.0, alpha_denom, torch.ones_like(alpha_denom))
