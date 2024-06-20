@@ -48,14 +48,15 @@ class FastKANConvNDLayer(nn.Module):
         if output_dim % groups != 0:
             raise ValueError('output_dim must be divisible by groups')
 
-        self.base_conv = nn.ModuleList([conv_class(input_dim // groups,
-                                                   output_dim // groups,
-                                                   kernel_size,
-                                                   stride,
-                                                   padding,
-                                                   dilation,
-                                                   groups=1,
-                                                   bias=False) for _ in range(groups)])
+        if use_base_update:
+            self.base_conv = nn.ModuleList([conv_class(input_dim // groups,
+                                                    output_dim // groups,
+                                                    kernel_size,
+                                                    stride,
+                                                    padding,
+                                                    dilation,
+                                                    groups=1,
+                                                    bias=False) for _ in range(groups)])
 
         self.spline_conv = nn.ModuleList([conv_class(grid_size * input_dim // groups,
                                                      output_dim // groups,
@@ -80,21 +81,23 @@ class FastKANConvNDLayer(nn.Module):
                 self.dropout = nn.Dropout3d(p=dropout)
 
         # Initialize weights using Kaiming uniform distribution for better training start
-        for conv_layer in self.base_conv:
-            nn.init.kaiming_uniform_(conv_layer.weight, nonlinearity='linear')
+        if use_base_update:
+            for conv_layer in self.base_conv:
+                nn.init.kaiming_uniform_(conv_layer.weight, nonlinearity='linear')
 
         for conv_layer in self.spline_conv:
             nn.init.kaiming_uniform_(conv_layer.weight, nonlinearity='linear')
 
     def forward_fast_kan(self, x, group_index):
         # Apply base activation to input and then linear transform with base weights
+        if self.use_base_update:
+            base_output = self.base_conv[group_index](self.base_activation(x))
         if self.dropout is not None:
             x = self.dropout(x)
         spline_basis = self.rbf(self.layer_norm[group_index](x))
         spline_basis = spline_basis.moveaxis(-1, 2).flatten(1, 2)
         spline_output = self.spline_conv[group_index](spline_basis)
         if self.use_base_update:
-            base_output = self.base_conv[group_index](self.base_activation(x))
             x = base_output + spline_output
         else:
             x = spline_output
