@@ -218,6 +218,7 @@ class FastKANLayer(nn.Module):
         w = self.spline_linear.weight[
             output_index, input_index * ng : (input_index + 1) * ng
         ]   # num_grids,
+        # print(self.spline_linear.weight.shape, w.shape)
         x = torch.linspace(
             self.rbf.grid_min - num_extrapolate_bins * h,
             self.rbf.grid_max + num_extrapolate_bins * h,

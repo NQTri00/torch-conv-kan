@@ -23,7 +23,7 @@ class RadialBasisFunction(nn.Module):
 
 
 class FastKANConvNDLayer(nn.Module):
-    def __init__(self, conv_class, norm_class, input_dim, output_dim, kernel_size,
+    def __init__(self, conv_class, norm_class, input_dim, output_dim, kernel_size, use_base_update: bool = True,
                  groups=1, padding=0, stride=1, dilation=1,
                  ndim: int = 2, grid_size=8, base_activation=nn.SiLU, grid_range=[-2, 2], dropout=0.0, **norm_kwargs):
         super(FastKANConvNDLayer, self).__init__()
@@ -39,6 +39,7 @@ class FastKANConvNDLayer(nn.Module):
         self.base_activation = base_activation()
         self.grid_range = grid_range
         self.norm_kwargs = norm_kwargs
+        self.use_base_update = use_base_update
 
         if groups <= 0:
             raise ValueError('groups must be a positive integer')
@@ -86,15 +87,16 @@ class FastKANConvNDLayer(nn.Module):
             nn.init.kaiming_uniform_(conv_layer.weight, nonlinearity='linear')
 
     def forward_fast_kan(self, x, group_index):
-
         # Apply base activation to input and then linear transform with base weights
-        base_output = self.base_conv[group_index](self.base_activation(x))
         if self.dropout is not None:
             x = self.dropout(x)
         spline_basis = self.rbf(self.layer_norm[group_index](x))
         spline_basis = spline_basis.moveaxis(-1, 2).flatten(1, 2)
         spline_output = self.spline_conv[group_index](spline_basis)
-        x = base_output + spline_output
+        if self.use_base_update:
+            base_output = self.base_conv[group_index](self.base_activation(x))
+            x = base_output + spline_output
+        x = spline_output
 
         return x
 
@@ -106,6 +108,37 @@ class FastKANConvNDLayer(nn.Module):
             output.append(y.clone())
         y = torch.cat(output, dim=1)
         return y
+    
+    def plot_curve(
+        self,
+        input_index: int,
+        output_index: int,
+        num_pts: int = 1000,
+        num_extrapolate_bins: int = 2
+    ):
+        '''this function returns the learned curves in a FastKANLayer.
+        input_index: the selected index of the input, in [0, input_dim) .
+        output_index: the selected index of the output, in [0, output_dim) .
+        num_pts: num of points sampled for the curve.
+        num_extrapolate_bins (N_e): num of bins extrapolating from the given grids. The curve 
+            will be calculate in the range of [grid_min - h * N_e, grid_max + h * N_e].
+        '''
+        ng = self.rbf.num_grids
+        h = self.rbf.denominator
+        assert input_index < self.inputdim
+        assert output_index < self.outdim
+        # print(self.spline_conv[0].weight.shape)
+        w = self.spline_conv[0].weight[
+            output_index, input_index * ng : (input_index + 1) * ng, :
+        ]   # num_grids,
+        x = torch.linspace(
+            self.rbf.grid_min - num_extrapolate_bins * h,
+            self.rbf.grid_max + num_extrapolate_bins * h,
+            num_pts
+        )   # num_pts, num_grids
+        with torch.no_grad():
+            y = (w * self.rbf(x.to(w.dtype))).sum(-1)
+        return x, y
 
 
 class FastKANConv3DLayer(FastKANConvNDLayer):
