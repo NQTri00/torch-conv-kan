@@ -96,7 +96,8 @@ class FastKANConvNDLayer(nn.Module):
         if self.use_base_update:
             base_output = self.base_conv[group_index](self.base_activation(x))
             x = base_output + spline_output
-        x = spline_output
+        else:
+            x = spline_output
 
         return x
 
